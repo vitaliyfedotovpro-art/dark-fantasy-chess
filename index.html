@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0a080d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Dark Fantasy Chess</title>
+
+  <!-- Google Fonts for Gothic Aesthetic -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&display=swap" rel="stylesheet">
+
+  <!-- PeerJS for Serverless P2P Sharing with Friends -->
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-icon">⚔️</span>
+      <h1 class="app-title">DARK FANTASY CHESS</h1>
+    </div>
+    <div class="header-controls">
+      <button id="btnShare" class="btn-icon" title="Сыграть с другом по ссылке">
+        <span>🔗</span> <span>Поделиться</span>
+      </button>
+      <button id="btnFlip" class="btn-icon" title="Повернуть доску">
+        <span>🔄</span>
+      </button>
+      <button id="btnNewGame" class="btn-icon" title="Новая игра">
+        <span>⚡</span> <span>Новая</span>
+      </button>
+      <button id="btnCodex" class="btn-icon" title="Кодекс правил">
+        <span>📜</span>
+      </button>
+      <button id="btnSettings" class="btn-icon" title="Настройки">
+        <span>⚙️</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-container">
+    <!-- Board Arena -->
+    <div class="arena">
+      <!-- Top Player Bar -->
+      <div id="topPlayer" class="player-bar">
+        <div class="player-info">
+          <span class="player-avatar">👤</span>
+          <span id="topPlayerName" class="player-name">Противник</span>
+          <span class="turn-indicator"></span>
+        </div>
+        <div id="topCaptured" class="player-captured"></div>
+      </div>
+
+      <!-- Board & Eval Bar -->
+      <div class="board-wrapper">
+        <div class="eval-bar" title="Оценка позиции Оракулом">
+          <div id="evalWhite" class="eval-fill-white"></div>
+          <div id="evalBlack" class="eval-fill-black"></div>
+          <span id="evalText" class="eval-text">0.0</span>
+        </div>
+        <div id="board" class="board-stage"></div>
+      </div>
+
+      <!-- Bottom Player Bar -->
+      <div id="bottomPlayer" class="player-bar active">
+        <div class="player-info">
+          <span class="player-avatar">👑</span>
+          <span id="bottomPlayerName" class="player-name">Игрок</span>
+          <span class="turn-indicator"></span>
+        </div>
+        <div id="bottomCaptured" class="player-captured"></div>
+      </div>
+
+      <!-- Learner Alert / Tutor banner -->
+      <div id="learnerAlert" style="display:none;width:100%;max-width:520px;padding:8px 12px;background:rgba(201,158,82,0.12);border:1px solid var(--border-gold);border-radius:8px;font-size:0.85rem;line-height:1.4;"></div>
+    </div>
+
+    <!-- Side Panel: Insight & Academy -->
+    <aside class="side-panel">
+      <nav class="tabs-nav">
+        <button class="tab-btn active" data-tab="tabInsight">👁️ Оракул (Insight)</button>
+        <button class="tab-btn" data-tab="tabAcademy">🏛️ Академия</button>
+        <button class="tab-btn" data-tab="tabMoves">📜 Ходы</button>
+      </nav>
+
+      <!-- Tab: Insight / Oracle -->
+      <div id="tabInsight" class="tab-content active">
+        <div class="insight-header">
+          <div class="oracle-title">👁️ Взгляд Оракула</div>
+          <span id="gameEvalBadge" class="eval-badge">Равновесие</span>
+        </div>
+
+        <div id="insightCard" class="insight-card">
+          <div style="color:var(--text-muted);font-size:0.85rem;">
+            Сделайте первый ход, и Оракул раскроет тактику и уроки великих мастеров.
+          </div>
+        </div>
+
+        <div id="chroniclesBox" class="chronicles-box" style="display:none;"></div>
+      </div>
+
+      <!-- Tab: Academy (Lessons) -->
+      <div id="tabAcademy" class="tab-content">
+        <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:8px;">
+          Интерактивное обучение от основ до гроссмейстерских мотивов:
+        </div>
+        <div id="academyList" style="display:flex;flex-direction:column;gap:8px;max-height:420px;overflow-y:auto;"></div>
+      </div>
+
+      <!-- Tab: Moves History -->
+      <div id="tabMoves" class="tab-content">
+        <div id="moveLog" class="move-log" style="max-height:360px;"></div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Dialog: Promotion Picker -->
+  <dialog id="promoDialog">
+    <div class="dialog-header">
+      <h3 class="dialog-title">Перерождение пешки</h3>
+    </div>
+    <p style="font-size:0.85rem;color:var(--text-muted);">Выберите темную сущность для превращения:</p>
+    <div id="promoOpts" class="promo-grid"></div>
+  </dialog>
+
+  <!-- Dialog: Settings -->
+  <dialog id="settingsDialog">
+    <div class="dialog-header">
+      <h3 class="dialog-title">Настройки Цитадели</h3>
+      <button class="dialog-close" onclick="this.closest('dialog').close()">✕</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px;font-size:0.9rem;">
+      <label style="display:flex;justify-content:space-between;align-items:center;">
+        <span>Режим игры:</span>
+        <select id="optMode" style="background:var(--bg-primary);color:var(--text-main);border:1px solid var(--border-color);border-radius:6px;padding:4px 8px;">
+          <option value="ai">Против ИИ</option>
+          <option value="pass_and_play">Вдвоём на одном экране</option>
+        </select>
+      </label>
+      <label style="display:flex;justify-content:space-between;align-items:center;">
+        <span>Сложность ИИ:</span>
+        <select id="optAiDiff" style="background:var(--bg-primary);color:var(--text-main);border:1px solid var(--border-color);border-radius:6px;padding:4px 8px;">
+          <option value="2">Ученик (глубина 2)</option>
+          <option value="4" selected>Мастер (глубина 4)</option>
+          <option value="5">Гроссмейстер (глубина 5)</option>
+        </select>
+      </label>
+      <label style="display:flex;justify-content:space-between;align-items:center;">
+        <span>Подсказки и режим обучения:</span>
+        <input type="checkbox" id="optLearner" checked>
+      </label>
+      <label style="display:flex;justify-content:space-between;align-items:center;">
+        <span>Сцены боя:</span>
+        <select id="optBattle" style="background:var(--bg-primary);color:var(--text-main);border:1px solid var(--border-color);border-radius:6px;padding:4px 8px;">
+          <option value="cutin" selected>Крупный план</option>
+          <option value="board">На поле</option>
+          <option value="off">Без анимации</option>
+        </select>
+      </label>
+      <label style="display:flex;justify-content:space-between;align-items:center;">
+        <span>Звуковые эффекты:</span>
+        <input type="checkbox" id="optSound" checked>
+      </label>
+    </div>
+  </dialog>
+
+  <!-- Dialog: Codex -->
+  <dialog id="codexDialog">
+    <div class="dialog-header">
+      <h3 class="dialog-title">Кодекс Тёмных Шахмат</h3>
+      <button class="dialog-close" onclick="this.closest('dialog').close()">✕</button>
+    </div>
+    <div id="codexContent" style="max-height:60vh;overflow-y:auto;padding-right:8px;"></div>
+  </dialog>
+
+  <!-- Dialog: Share / Multiplayer -->
+  <dialog id="shareDialog">
+    <div class="dialog-header">
+      <h3 class="dialog-title">Сыграть с другом</h3>
+      <button class="dialog-close" onclick="this.closest('dialog').close()">✕</button>
+    </div>
+    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:10px;">
+      Отправьте эту ссылку другу — он сможет открыть её прямо в мобильном браузере и присоединиться без регистрации:
+    </p>
+    <div style="display:flex;gap:6px;margin-bottom:12px;">
+      <input type="text" id="shareUrlInput" readonly style="flex:1;background:var(--bg-primary);color:var(--text-main);border:1px solid var(--border-color);border-radius:6px;padding:6px 10px;font-size:0.8rem;">
+      <button class="btn-icon" onclick="navigator.clipboard.writeText(document.getElementById('shareUrlInput').value);alert('Ссылка скопирована!');">Копировать</button>
+    </div>
+    <div id="netStatusText" style="font-size:0.85rem;color:var(--border-gold);">Ожидание подключения...</div>
+  </dialog>
+
+  <!-- Game Scripts -->
+  <script src="js/chess.js"></script>
+  <script src="js/pieces.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/knowledge.js"></script>
+  <script src="js/insight.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/network.js"></script>
+  <script src="art/sprites/manifest.js"></script>
+  <script src="js/battlefield.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
